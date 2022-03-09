@@ -5,8 +5,6 @@ import seaborn as sns
 import numpy as np
 import plotly.express as px
 
-st.title('Análisis de empresas que cotizan en la Bolsa de Valores')
-
 df = pd.read_csv('Ecuanomia - test.csv', decimal=',')
 empresas = df['Empresa'].unique()
 empresa = st.selectbox('Selecciona una empresa', empresas)
