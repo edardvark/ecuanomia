@@ -10,6 +10,15 @@ empresas = df['Empresa'].unique()
 empresa = st.selectbox('Selecciona una empresa', empresas)
 df_empresa = df[df['Empresa']==empresa]
 
+ultimos_ingresos = f"${df_empresa['Ingresos'].iloc[-1]}"
+delta_ingresos = f"{df_empresa['Crecimiento de Anual de Ingresos %'].iloc[-1]}%"
+precio_accion = f"${df_empresa['Precio Acción'].iloc[-1]}"
+delta_accion = f"{((df_empresa['Precio Acción'].iloc[-1]-df_empresa['Precio Acción'].iloc[-2])/df_empresa['Precio Acción'].iloc[-1]*100).round(decimals = 2)}%"
+
+col1, col2 = st.columns(2)
+col1.metric(label='Ingresos', value=ultimos_ingresos, delta=delta_ingresos)
+col2.metric(label='Precio Acción', value=precio_accion, delta=delta_accion)
+
 fig = px.bar(df_empresa, x='Año', y='Ingresos', text='Ingresos')
 fig.update_traces(textposition='outside', marker_color='royalblue')
 fig.update_layout(width=600, height=500, plot_bgcolor='white', yaxis_visible=False, title_text='Ingresos (en millones de dólares)', 
