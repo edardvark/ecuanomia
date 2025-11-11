@@ -11,7 +11,7 @@ st.set_page_config(
 # Title
 st.title("📊 Tasas pasivas de todas las entidades financieras")
 
-url_path = r"C:\Users\Eduardo Viteri\tasas_2024_forward.csv"
+url_path = "tasas_2024_forward.csv"
 
 # Load data locally
 @st.cache_data
@@ -208,3 +208,4 @@ if df is not None:
         st.info(f"Meses disponibles: {df['mes'].unique() if 'mes' in df.columns else 'N/A'}")
 else:
     st.error("❌ Failed to load data. Please check the file path.")
+
