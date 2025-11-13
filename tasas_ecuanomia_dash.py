@@ -1,13 +1,14 @@
 import dash
 from dash import dcc, html, Input, Output, dash_table
 import pandas as pd
+import os
 
 # Initialize the Dash app
 app = dash.Dash(__name__)
 app.title = "Tasas pasivas de todas las entidades financieras"
 
-# Load data
-url_path = r"C:\Users\Eduardo Viteri\tasas_2024_forward.csv"
+# Load data - use environment variable for production, fallback to local path
+url_path = os.environ.get('DATA_FILE_PATH', r"C:\Users\Eduardo Viteri\tasas_2024_forward.csv")
 
 # Load data on app initialization
 def load_initial_data():
@@ -478,5 +479,9 @@ def update_dashboard(data, search_text, selected_calificacion, selected_plazo,
     
     return kpi_cards, desktop_table, mobile_cards, filter_info, filter_info
 
+# Expose server for gunicorn
+server = app.server
+
 if __name__ == '__main__':
     app.run(debug=True)
+
