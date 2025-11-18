@@ -8,7 +8,7 @@ app = dash.Dash(__name__)
 app.title = "Tasas pasivas de todas las entidades financieras"
 
 # Load data - use environment variable for production, fallback to local path
-url_path = "tasas_2024_forward.csv"
+url_path = "tasas_sept_2025.csv"
 
 # Load data on app initialization
 def load_initial_data():
@@ -484,5 +484,6 @@ server = app.server
 
 if __name__ == '__main__':
     app.run(debug=True)
+
 
 
