@@ -1,5 +1,5 @@
 import dash
-from dash import dcc, html, Input, Output, State, dash_table, no_update
+from dash import dcc, html, Input, Output, dash_table
 import pandas as pd
 import os
 import plotly.graph_objects as go
@@ -40,10 +40,6 @@ def load_companies_data():
 
 
 
-def map_path_to_app(pathname):
-    if pathname == '/companias':
-        return 'companias'
-    return 'tasas'
 def format_money_short(value):
     if pd.isna(value):
         return "$ 0"
@@ -67,141 +63,142 @@ app.layout = html.Div([
     dcc.Store(id='companies-data-store', data=companies_initial_data),
     dcc.Location(id='url', refresh=False),
 
-    dcc.Tabs(
-        id='app-menu',
-        value='tasas',
-        children=[
-            dcc.Tab(label='📊 Tasas pasivas', value='tasas'),
-            dcc.Tab(label='🏢 Compañías', value='companias')
-        ],
-        style={'marginBottom': '20px'}
-    ),
-    
-    # Header - tasas app
     html.Div([
-        html.H1("📊 Tasas pasivas de todas las entidades financieras", 
-                style={'textAlign': 'center', 'marginBottom': '30px'})
-    ], id='tasas-header'),
-    
-    # Main Container
-    html.Div([
-        # Desktop Filters Sidebar
         html.Div([
-            html.H3("🔍 Filtros", style={'marginBottom': '20px'}),
-            
-            html.Label("Buscar por Razón Social", style={'fontWeight': 'bold', 'marginTop': '10px'}),
-            dcc.Input(
-                id='search-input',
-                type='text',
-                placeholder='Ingrese texto para buscar...',
-                style={'width': '100%', 'padding': '10px', 'marginBottom': '15px', 'boxSizing': 'border-box'}
-            ),
-            
-            html.Label("Filtrar por Calificación", style={'fontWeight': 'bold', 'marginTop': '10px'}),
-            dcc.Dropdown(
-                id='calificacion-dropdown',
-                placeholder='Seleccione una calificación...',
-                style={'marginBottom': '15px'}
-            ),
-            
-            html.Label("Filtrar por Plazo", style={'fontWeight': 'bold', 'marginTop': '10px'}),
-            dcc.Dropdown(
-                id='plazo-dropdown',
-                placeholder='Seleccione un plazo...',
-                style={'marginBottom': '15px'}
-            ),
-            
-            html.Div(id='filter-info', style={'marginTop': '20px', 'padding': '10px', 
-                                              'backgroundColor': '#e3f2fd', 'borderRadius': '5px'})
-        ], className='filter-sidebar desktop-filter', style={'width': '25%', 'padding': '20px', 'backgroundColor': '#f5f5f5', 
-                  'borderRadius': '10px', 'marginRight': '20px', 'boxSizing': 'border-box'}),
-        
-        # Main Content
+            html.H2("Ecuanomía", className='menu-brand'),
+            dcc.RadioItems(
+                id='app-menu',
+                value='tasas',
+                options=[
+                    {'label': '📊 Tasas pasivas', 'value': 'tasas'},
+                    {'label': '🏢 Compañías', 'value': 'companias'}
+                ],
+                className='left-menu',
+                inputStyle={'marginRight': '10px'}
+            )
+        ], className='left-sidebar'),
+
         html.Div([
-            # KPI Cards
-            html.Div(id='kpi-cards', style={'marginBottom': '30px'}),
-            
-            # Mobile Filters (Collapsible, after KPIs)
-            html.Details([
-                html.Summary("🔍 Filtros", style={'fontSize': '1.2em', 'fontWeight': 'bold', 'padding': '15px', 
-                                                  'backgroundColor': '#f5f5f5', 'borderRadius': '5px', 
-                                                  'cursor': 'pointer', 'marginBottom': '20px'}),
+            # Header - tasas app
+            html.Div([
+                html.H1("📊 Tasas pasivas de todas las entidades financieras",
+                        style={'textAlign': 'center', 'marginBottom': '30px'})
+            ], id='tasas-header'),
+
+            # Main Container
+            html.Div([
+                # Desktop Filters Sidebar
                 html.Div([
+                    html.H3("🔍 Filtros", style={'marginBottom': '20px'}),
+
                     html.Label("Buscar por Razón Social", style={'fontWeight': 'bold', 'marginTop': '10px'}),
                     dcc.Input(
-                        id='search-input-mobile',
+                        id='search-input',
                         type='text',
                         placeholder='Ingrese texto para buscar...',
                         style={'width': '100%', 'padding': '10px', 'marginBottom': '15px', 'boxSizing': 'border-box'}
                     ),
-                    
+
                     html.Label("Filtrar por Calificación", style={'fontWeight': 'bold', 'marginTop': '10px'}),
                     dcc.Dropdown(
-                        id='calificacion-dropdown-mobile',
+                        id='calificacion-dropdown',
                         placeholder='Seleccione una calificación...',
                         style={'marginBottom': '15px'}
                     ),
-                    
+
                     html.Label("Filtrar por Plazo", style={'fontWeight': 'bold', 'marginTop': '10px'}),
                     dcc.Dropdown(
-                        id='plazo-dropdown-mobile',
+                        id='plazo-dropdown',
                         placeholder='Seleccione un plazo...',
                         style={'marginBottom': '15px'}
                     ),
-                    
-                    html.Div(id='filter-info-mobile', style={'marginTop': '20px', 'padding': '10px', 
-                                                              'backgroundColor': '#e3f2fd', 'borderRadius': '5px'})
-                ], style={'padding': '15px', 'backgroundColor': '#f9f9f9', 'borderRadius': '5px'})
-            ], className='mobile-filter', open=False),
-            
-            # Table/Cards Section
-            html.H2("📋 Todas las ofertas", style={'marginBottom': '20px'}),
-            
-            # Desktop Table
-            html.Div(id='desktop-table', className='desktop-view'),
-            
-            # Mobile Cards
-            html.Div(id='mobile-cards', className='mobile-view')
-            
-        ], className='main-content', style={'width': '70%', 'boxSizing': 'border-box', 'padding': '20px'})
-    ], id='tasas-app-container', style={'display': 'flex', 'flexWrap': 'wrap', 'width': '100%', 'boxSizing': 'border-box'}),
 
-    html.Div([
-        html.Div([
-            html.H1("Análisis de compañías", className='companies-title'),
-            html.P("Ventas e utilidades anuales — datos Ecuanomía", className='companies-subtitle'),
-            html.Hr(className='companies-divider'),
+                    html.Div(id='filter-info', style={'marginTop': '20px', 'padding': '10px',
+                                                      'backgroundColor': '#e3f2fd', 'borderRadius': '5px'})
+                ], className='filter-sidebar desktop-filter', style={'width': '25%', 'padding': '20px', 'backgroundColor': '#f5f5f5',
+                          'borderRadius': '10px', 'marginRight': '20px', 'boxSizing': 'border-box'}),
 
-            html.Label("BUSCAR COMPAÑÍA", className='companies-label'),
-            dcc.Dropdown(
-                id='company-search-dropdown',
-                placeholder='Seleccione una compañía...',
-                className='companies-search'
-            ),
-
-            html.Div([
-                html.Div(id='selected-company-name', className='company-name-card'),
+                # Main Content
                 html.Div([
-                    html.Div("VENTAS (2024)", className='metric-label'),
-                    html.Div(id='company-ventas-kpi', className='metric-value ventas')
-                ], className='metric-card'),
+                    html.Div(id='kpi-cards', style={'marginBottom': '30px'}),
+
+                    html.Details([
+                        html.Summary("🔍 Filtros", style={'fontSize': '1.2em', 'fontWeight': 'bold', 'padding': '15px',
+                                                          'backgroundColor': '#f5f5f5', 'borderRadius': '5px',
+                                                          'cursor': 'pointer', 'marginBottom': '20px'}),
+                        html.Div([
+                            html.Label("Buscar por Razón Social", style={'fontWeight': 'bold', 'marginTop': '10px'}),
+                            dcc.Input(
+                                id='search-input-mobile',
+                                type='text',
+                                placeholder='Ingrese texto para buscar...',
+                                style={'width': '100%', 'padding': '10px', 'marginBottom': '15px', 'boxSizing': 'border-box'}
+                            ),
+
+                            html.Label("Filtrar por Calificación", style={'fontWeight': 'bold', 'marginTop': '10px'}),
+                            dcc.Dropdown(
+                                id='calificacion-dropdown-mobile',
+                                placeholder='Seleccione una calificación...',
+                                style={'marginBottom': '15px'}
+                            ),
+
+                            html.Label("Filtrar por Plazo", style={'fontWeight': 'bold', 'marginTop': '10px'}),
+                            dcc.Dropdown(
+                                id='plazo-dropdown-mobile',
+                                placeholder='Seleccione un plazo...',
+                                style={'marginBottom': '15px'}
+                            ),
+
+                            html.Div(id='filter-info-mobile', style={'marginTop': '20px', 'padding': '10px',
+                                                                      'backgroundColor': '#e3f2fd', 'borderRadius': '5px'})
+                        ], style={'padding': '15px', 'backgroundColor': '#f9f9f9', 'borderRadius': '5px'})
+                    ], className='mobile-filter', open=False),
+
+                    html.H2("📋 Todas las ofertas", style={'marginBottom': '20px'}),
+                    html.Div(id='desktop-table', className='desktop-view'),
+                    html.Div(id='mobile-cards', className='mobile-view')
+
+                ], className='main-content', style={'width': '70%', 'boxSizing': 'border-box', 'padding': '20px'})
+            ], id='tasas-app-container', style={'display': 'flex', 'flexWrap': 'wrap', 'width': '100%', 'boxSizing': 'border-box'}),
+
+            html.Div([
                 html.Div([
-                    html.Div("UTILIDAD NETA (2024)", className='metric-label'),
-                    html.Div(id='company-utilidad-kpi', className='metric-value utilidad')
-                ], className='metric-card')
-            ], className='companies-kpi-grid'),
+                    html.H1("Análisis de compañías", className='companies-title'),
+                    html.P("Ventas e utilidades anuales — datos Ecuanomía", className='companies-subtitle'),
+                    html.Hr(className='companies-divider'),
 
-            html.Div([
-                html.H3("INGRESOS TOTALES (VENTAS) POR AÑO", className='chart-title'),
-                dcc.Graph(id='company-ingresos-chart', config={'displayModeBar': False})
-            ], className='chart-container'),
+                    html.Label("BUSCAR COMPAÑÍA", className='companies-label'),
+                    dcc.Dropdown(
+                        id='company-search-dropdown',
+                        placeholder='Seleccione una compañía...',
+                        className='companies-search'
+                    ),
 
-            html.Div([
-                html.H3("UTILIDAD NETA POR AÑO", className='chart-title'),
-                dcc.Graph(id='company-utilidad-chart', config={'displayModeBar': False})
-            ], className='chart-container')
-        ], className='companies-app')
-    ], id='companias-app-container', style={'display': 'none'})
+                    html.Div([
+                        html.Div(id='selected-company-name', className='company-name-card'),
+                        html.Div([
+                            html.Div("VENTAS (2024)", className='metric-label'),
+                            html.Div(id='company-ventas-kpi', className='metric-value ventas')
+                        ], className='metric-card'),
+                        html.Div([
+                            html.Div("UTILIDAD NETA (2024)", className='metric-label'),
+                            html.Div(id='company-utilidad-kpi', className='metric-value utilidad')
+                        ], className='metric-card')
+                    ], className='companies-kpi-grid'),
+
+                    html.Div([
+                        html.H3("INGRESOS TOTALES (VENTAS) POR AÑO", className='chart-title'),
+                        dcc.Graph(id='company-ingresos-chart', config={'displayModeBar': False})
+                    ], className='chart-container'),
+
+                    html.Div([
+                        html.H3("UTILIDAD NETA POR AÑO", className='chart-title'),
+                        dcc.Graph(id='company-utilidad-chart', config={'displayModeBar': False})
+                    ], className='chart-container')
+                ], className='companies-app')
+            ], id='companias-app-container', style={'display': 'none'})
+        ], className='content-area')
+    ], className='app-shell')
 ])
 
 # Add custom CSS using index_string
@@ -219,10 +216,53 @@ app.index_string = '''
             }
             body {
                 margin: 0;
-                padding: 20px;
+                padding: 0;
                 font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             }
+            .app-shell {
+                display: flex;
+                min-height: 100vh;
+                background: #f4f6fa;
+            }
+            .left-sidebar {
+                width: 260px;
+                background: #0f172a;
+                color: #fff;
+                padding: 24px 18px;
+                position: sticky;
+                top: 0;
+                align-self: flex-start;
+                min-height: 100vh;
+            }
+            .menu-brand {
+                margin: 0 0 24px 0;
+                font-size: 1.4rem;
+            }
+            .left-menu label {
+                display: block;
+                padding: 12px 10px;
+                border-radius: 8px;
+                margin-bottom: 8px;
+                background: #1e293b;
+                cursor: pointer;
+            }
+            .left-menu input[type="radio"] {
+                margin-right: 8px;
+            }
+            .content-area {
+                flex: 1;
+                padding: 20px;
+                overflow-x: hidden;
+            }
             @media (max-width: 768px) {
+                .app-shell {
+                    flex-direction: column;
+                }
+                .left-sidebar {
+                    width: 100%;
+                    min-height: auto;
+                    position: relative;
+                }
                 .desktop-view {
                     display: none !important;
                 }
@@ -425,26 +465,6 @@ app.index_string = '''
 
 
 
-
-@app.callback(
-    Output('app-menu', 'value'),
-    Input('url', 'pathname')
-)
-def sync_tab_from_url(pathname):
-    return map_path_to_app(pathname)
-
-
-@app.callback(
-    Output('url', 'pathname'),
-    Input('app-menu', 'value'),
-    State('url', 'pathname'),
-    prevent_initial_call=True
-)
-def sync_url_from_tab(selected_app, current_path):
-    target_path = '/companias' if selected_app == 'companias' else '/'
-    if current_path == target_path:
-        return no_update
-    return target_path
 
 @app.callback(
     [Output('tasas-header', 'style'),
