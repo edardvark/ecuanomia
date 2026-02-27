@@ -1,7 +1,6 @@
 import dash
 from dash import dcc, html, Input, Output, dash_table
 import pandas as pd
-import os
 import plotly.graph_objects as go
 
 # Initialize the Dash app
@@ -18,7 +17,7 @@ def load_initial_data():
         df = pd.read_csv(url_path)
         if 'mes' in df.columns:
             df['mes'] = df['mes'].astype(str)
-        return df.to_dict('records')
+        return df
     except Exception as e:
         return None
 
@@ -32,7 +31,7 @@ def load_companies_data():
                 companies_df[col] = pd.to_numeric(companies_df[col], errors='coerce')
         companies_df = companies_df.dropna(subset=['nombre', 'anio'])
         companies_df['anio'] = companies_df['anio'].astype(int)
-        return companies_df.to_dict('records')
+        return companies_df
     except Exception:
         return None
 
@@ -59,8 +58,6 @@ companies_initial_data = load_companies_data()
 
 # Define the app layout
 app.layout = html.Div([
-    dcc.Store(id='data-store', data=initial_data),
-    dcc.Store(id='companies-data-store', data=companies_initial_data),
     dcc.Location(id='url', refresh=False),
 
     html.Div([
@@ -486,12 +483,12 @@ def toggle_apps(selected_app):
 
 @app.callback(
     Output('company-search-dropdown', 'options'),
-    Input('companies-data-store', 'data')
+    Input('app-menu', 'value')
 )
-def populate_company_dropdown(data):
-    if data is None:
+def populate_company_dropdown(_selected_app):
+    if companies_initial_data is None:
         return []
-    companies_df = pd.DataFrame(data)
+    companies_df = companies_initial_data
     company_names = sorted(companies_df['nombre'].dropna().unique())
     return [{'label': name, 'value': name} for name in company_names]
 
@@ -503,20 +500,20 @@ def populate_company_dropdown(data):
      Output('company-utilidad-kpi', 'children'),
      Output('company-ingresos-chart', 'figure'),
      Output('company-utilidad-chart', 'figure')],
-    [Input('companies-data-store', 'data'),
+    [Input('app-menu', 'value'),
      Input('company-search-dropdown', 'value')]
 )
-def update_companies_dashboard(data, selected_company):
+def update_companies_dashboard(_selected_app, selected_company):
     empty_fig = go.Figure().update_layout(
         paper_bgcolor='#111522',
         plot_bgcolor='#111522',
         font={'color': '#d0d6e2'}
     )
 
-    if data is None:
+    if companies_initial_data is None:
         return None, 'Sin datos disponibles', '$ 0', '$ 0', empty_fig, empty_fig
 
-    companies_df = pd.DataFrame(data)
+    companies_df = companies_initial_data
 
     if not selected_company:
         top_2024 = companies_df[companies_df['anio'] == 2024].sort_values('ingresos_totales', ascending=False)
@@ -576,13 +573,13 @@ def update_companies_dashboard(data, selected_company):
      Output('plazo-dropdown', 'options'),
      Output('calificacion-dropdown-mobile', 'options'),
      Output('plazo-dropdown-mobile', 'options')],
-    Input('data-store', 'data')
+    Input('app-menu', 'value')
 )
-def populate_dropdowns(data):
-    if data is None:
+def populate_dropdowns(_selected_app):
+    if initial_data is None:
         return [], [], [], []
-    
-    df = pd.DataFrame(data)
+
+    df = initial_data.copy()
     
     # Filter for month == '2025-09'
     if 'mes' in df.columns:
@@ -654,7 +651,7 @@ def sync_mobile_to_desktop(search, calif, plazo):
      Output('mobile-cards', 'children'),
      Output('filter-info', 'children'),
      Output('filter-info-mobile', 'children')],
-    [Input('data-store', 'data'),
+    [Input('app-menu', 'value'),
      Input('search-input', 'value'),
      Input('calificacion-dropdown', 'value'),
      Input('plazo-dropdown', 'value'),
@@ -662,17 +659,17 @@ def sync_mobile_to_desktop(search, calif, plazo):
      Input('calificacion-dropdown-mobile', 'value'),
      Input('plazo-dropdown-mobile', 'value')]
 )
-def update_dashboard(data, search_text, selected_calificacion, selected_plazo, 
+def update_dashboard(_selected_app, search_text, selected_calificacion, selected_plazo, 
                      search_text_mobile, selected_calificacion_mobile, selected_plazo_mobile):
     # Use desktop values if available, otherwise use mobile (they should be synced anyway)
     search = search_text if search_text else search_text_mobile
     calif = selected_calificacion if selected_calificacion else selected_calificacion_mobile
     plazo = selected_plazo if selected_plazo else selected_plazo_mobile
     
-    if data is None:
+    if initial_data is None:
         return html.Div("Error loading data"), html.Div(), html.Div(), html.Div(), html.Div()
-    
-    df = pd.DataFrame(data)
+
+    df = initial_data.copy()
     
     # Filter for month == '2025-09'
     if 'mes' in df.columns:
