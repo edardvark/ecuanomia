@@ -1,5 +1,5 @@
 import dash
-from dash import dcc, html, Input, Output, dash_table
+from dash import dcc, html, Input, Output, State, dash_table, no_update
 import pandas as pd
 import os
 import plotly.graph_objects as go
@@ -37,6 +37,13 @@ def load_companies_data():
         return None
 
 
+
+
+
+def map_path_to_app(pathname):
+    if pathname == '/companias':
+        return 'companias'
+    return 'tasas'
 def format_money_short(value):
     if pd.isna(value):
         return "$ 0"
@@ -416,6 +423,28 @@ app.index_string = '''
 </html>
 '''
 
+
+
+
+@app.callback(
+    Output('app-menu', 'value'),
+    Input('url', 'pathname')
+)
+def sync_tab_from_url(pathname):
+    return map_path_to_app(pathname)
+
+
+@app.callback(
+    Output('url', 'pathname'),
+    Input('app-menu', 'value'),
+    State('url', 'pathname'),
+    prevent_initial_call=True
+)
+def sync_url_from_tab(selected_app, current_path):
+    target_path = '/companias' if selected_app == 'companias' else '/'
+    if current_path == target_path:
+        return no_update
+    return target_path
 
 @app.callback(
     [Output('tasas-header', 'style'),
