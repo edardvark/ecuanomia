@@ -2,10 +2,12 @@ import dash
 from dash import dcc, html, Input, Output, dash_table
 import pandas as pd
 import os
+import plotly.graph_objects as go
 
 # Initialize the Dash app
 app = dash.Dash(__name__)
 app.title = "Tasas pasivas de todas las entidades financieras"
+app.config.suppress_callback_exceptions = True
 
 # Load data - use environment variable for production, fallback to local path
 url_path = "tasas_sept_2025.csv"
@@ -20,19 +22,59 @@ def load_initial_data():
     except Exception as e:
         return None
 
+
+def load_companies_data():
+    try:
+        companies_df = pd.read_csv("companias_2024_limpio2.csv")
+        companies_df['nombre'] = companies_df['nombre'].astype(str).str.strip()
+        for col in ['anio', 'ingresos_totales', 'utilidad_neta']:
+            if col in companies_df.columns:
+                companies_df[col] = pd.to_numeric(companies_df[col], errors='coerce')
+        companies_df = companies_df.dropna(subset=['nombre', 'anio'])
+        companies_df['anio'] = companies_df['anio'].astype(int)
+        return companies_df.to_dict('records')
+    except Exception:
+        return None
+
+
+def format_money_short(value):
+    if pd.isna(value):
+        return "$ 0"
+    value = float(value)
+    abs_value = abs(value)
+    if abs_value >= 1_000_000_000:
+        return f"$ {value / 1_000_000_000:,.2f} B"
+    if abs_value >= 1_000_000:
+        return f"$ {value / 1_000_000:,.2f} M"
+    if abs_value >= 1_000:
+        return f"$ {value / 1_000:,.2f} K"
+    return f"$ {value:,.2f}"
+
 # Initialize data store with loaded data
 initial_data = load_initial_data()
+companies_initial_data = load_companies_data()
 
 # Define the app layout
 app.layout = html.Div([
     dcc.Store(id='data-store', data=initial_data),
+    dcc.Store(id='companies-data-store', data=companies_initial_data),
     dcc.Location(id='url', refresh=False),
+
+    dcc.Tabs(
+        id='app-menu',
+        value='tasas',
+        children=[
+            dcc.Tab(label='📊 Tasas pasivas', value='tasas'),
+            dcc.Tab(label='🏢 Compañías', value='companias')
+        ],
+        style={'marginBottom': '20px'}
+    ),
     
-    # Header
+    # Header - tasas app
     html.Div([
         html.H1("📊 Tasas pasivas de todas las entidades financieras", 
                 style={'textAlign': 'center', 'marginBottom': '30px'})
-    ]),
+    ], id='tasas-header'),
     
     # Main Container
     html.Div([
@@ -115,7 +157,44 @@ app.layout = html.Div([
             html.Div(id='mobile-cards', className='mobile-view')
             
         ], className='main-content', style={'width': '70%', 'boxSizing': 'border-box', 'padding': '20px'})
-    ], style={'display': 'flex', 'flexWrap': 'wrap', 'width': '100%', 'boxSizing': 'border-box'})
+    ], id='tasas-app-container', style={'display': 'flex', 'flexWrap': 'wrap', 'width': '100%', 'boxSizing': 'border-box'}),
+
+    html.Div([
+        html.Div([
+            html.H1("Análisis de compañías", className='companies-title'),
+            html.P("Ventas e utilidades anuales — datos Ecuanomía", className='companies-subtitle'),
+            html.Hr(className='companies-divider'),
+
+            html.Label("BUSCAR COMPAÑÍA", className='companies-label'),
+            dcc.Dropdown(
+                id='company-search-dropdown',
+                placeholder='Seleccione una compañía...',
+                className='companies-search'
+            ),
+
+            html.Div([
+                html.Div(id='selected-company-name', className='company-name-card'),
+                html.Div([
+                    html.Div("VENTAS (2024)", className='metric-label'),
+                    html.Div(id='company-ventas-kpi', className='metric-value ventas')
+                ], className='metric-card'),
+                html.Div([
+                    html.Div("UTILIDAD NETA (2024)", className='metric-label'),
+                    html.Div(id='company-utilidad-kpi', className='metric-value utilidad')
+                ], className='metric-card')
+            ], className='companies-kpi-grid'),
+
+            html.Div([
+                html.H3("INGRESOS TOTALES (VENTAS) POR AÑO", className='chart-title'),
+                dcc.Graph(id='company-ingresos-chart', config={'displayModeBar': False})
+            ], className='chart-container'),
+
+            html.Div([
+                html.H3("UTILIDAD NETA POR AÑO", className='chart-title'),
+                dcc.Graph(id='company-utilidad-chart', config={'displayModeBar': False})
+            ], className='chart-container')
+        ], className='companies-app')
+    ], id='companias-app-container', style={'display': 'none'})
 ])
 
 # Add custom CSS using index_string
@@ -227,6 +306,103 @@ app.index_string = '''
             .mobile-card-value {
                 color: #333;
             }
+            .companies-app {
+                background-color: #05070e;
+                color: #f2f4f8;
+                min-height: 100vh;
+                padding: 20px;
+                border-radius: 12px;
+            }
+            .companies-title {
+                font-size: 48px;
+                margin: 0;
+            }
+            .companies-subtitle {
+                font-size: 28px;
+                color: #a3adbf;
+                margin-top: 8px;
+            }
+            .companies-divider {
+                border-color: #1f2533;
+                margin: 25px 0;
+            }
+            .companies-label {
+                display: block;
+                margin-bottom: 10px;
+                font-size: 24px;
+                letter-spacing: 1px;
+                color: #b8bfce;
+                font-weight: 700;
+            }
+            .companies-search .Select-control,
+            .companies-search .Select-menu-outer,
+            .companies-search .Select-placeholder,
+            .companies-search .Select-value-label {
+                background-color: #101522 !important;
+                color: #f2f4f8 !important;
+                border-color: #222a3d !important;
+                font-size: 24px;
+            }
+            .companies-kpi-grid {
+                display: grid;
+                grid-template-columns: 2fr 1fr 1fr;
+                gap: 20px;
+                margin-top: 25px;
+                margin-bottom: 25px;
+            }
+            .company-name-card,
+            .metric-card {
+                background-color: #111522;
+                border: 1px solid #1f2533;
+                border-radius: 14px;
+                padding: 24px;
+            }
+            .company-name-card {
+                border-left: 4px solid #20d16b;
+                font-size: 44px;
+                font-weight: 700;
+                display: flex;
+                align-items: center;
+            }
+            .metric-label {
+                color: #a3adbf;
+                font-size: 26px;
+                margin-bottom: 10px;
+                font-weight: 700;
+            }
+            .metric-value {
+                font-size: 56px;
+                font-weight: 800;
+            }
+            .metric-value.ventas {
+                color: #f2f4f8;
+            }
+            .metric-value.utilidad {
+                color: #20d16b;
+            }
+            .chart-container {
+                background-color: #111522;
+                border: 1px solid #1f2533;
+                border-radius: 18px;
+                padding: 20px;
+                margin-bottom: 20px;
+            }
+            .chart-title {
+                color: #a3adbf;
+                font-size: 30px;
+                margin: 0 0 10px 0;
+            }
+            @media (max-width: 1200px) {
+                .companies-kpi-grid {
+                    grid-template-columns: 1fr;
+                }
+                .company-name-card {
+                    font-size: 30px;
+                }
+                .metric-value {
+                    font-size: 38px;
+                }
+            }
         </style>
     </head>
     <body>
@@ -239,6 +415,111 @@ app.index_string = '''
     </body>
 </html>
 '''
+
+
+@app.callback(
+    [Output('tasas-header', 'style'),
+     Output('tasas-app-container', 'style'),
+     Output('companias-app-container', 'style')],
+    Input('app-menu', 'value')
+)
+def toggle_apps(selected_app):
+    tasas_visible = {'display': 'block'} if selected_app == 'tasas' else {'display': 'none'}
+    tasas_container = {
+        'display': 'flex' if selected_app == 'tasas' else 'none',
+        'flexWrap': 'wrap',
+        'width': '100%',
+        'boxSizing': 'border-box'
+    }
+    companias_visible = {'display': 'block'} if selected_app == 'companias' else {'display': 'none'}
+    return tasas_visible, tasas_container, companias_visible
+
+
+@app.callback(
+    Output('company-search-dropdown', 'options'),
+    Input('companies-data-store', 'data')
+)
+def populate_company_dropdown(data):
+    if data is None:
+        return []
+    companies_df = pd.DataFrame(data)
+    company_names = sorted(companies_df['nombre'].dropna().unique())
+    return [{'label': name, 'value': name} for name in company_names]
+
+
+@app.callback(
+    [Output('company-search-dropdown', 'value'),
+     Output('selected-company-name', 'children'),
+     Output('company-ventas-kpi', 'children'),
+     Output('company-utilidad-kpi', 'children'),
+     Output('company-ingresos-chart', 'figure'),
+     Output('company-utilidad-chart', 'figure')],
+    [Input('companies-data-store', 'data'),
+     Input('company-search-dropdown', 'value')]
+)
+def update_companies_dashboard(data, selected_company):
+    empty_fig = go.Figure().update_layout(
+        paper_bgcolor='#111522',
+        plot_bgcolor='#111522',
+        font={'color': '#d0d6e2'}
+    )
+
+    if data is None:
+        return None, 'Sin datos disponibles', '$ 0', '$ 0', empty_fig, empty_fig
+
+    companies_df = pd.DataFrame(data)
+
+    if not selected_company:
+        top_2024 = companies_df[companies_df['anio'] == 2024].sort_values('ingresos_totales', ascending=False)
+        selected_company = top_2024.iloc[0]['nombre'] if len(top_2024) > 0 else companies_df.iloc[0]['nombre']
+
+    company_df = companies_df[companies_df['nombre'] == selected_company].copy()
+    company_df = company_df.sort_values('anio')
+
+    company_2024 = company_df[company_df['anio'] == 2024]
+    ventas_2024 = company_2024['ingresos_totales'].iloc[0] if len(company_2024) > 0 else company_df['ingresos_totales'].iloc[-1]
+    utilidad_2024 = company_2024['utilidad_neta'].iloc[0] if len(company_2024) > 0 else company_df['utilidad_neta'].iloc[-1]
+
+    ingresos_fig = go.Figure(
+        data=[go.Bar(
+            x=company_df['anio'],
+            y=company_df['ingresos_totales'],
+            marker_color='#20d16b'
+        )]
+    )
+    ingresos_fig.update_layout(
+        paper_bgcolor='#111522',
+        plot_bgcolor='#111522',
+        font={'color': '#d0d6e2', 'size': 16},
+        xaxis=dict(title='', gridcolor='#2a3248'),
+        yaxis=dict(title='', gridcolor='#2a3248', tickprefix='$ '),
+        margin=dict(l=30, r=20, t=10, b=30)
+    )
+
+    utilidad_fig = go.Figure(
+        data=[go.Bar(
+            x=company_df['anio'],
+            y=company_df['utilidad_neta'],
+            marker_color='#20d16b'
+        )]
+    )
+    utilidad_fig.update_layout(
+        paper_bgcolor='#111522',
+        plot_bgcolor='#111522',
+        font={'color': '#d0d6e2', 'size': 16},
+        xaxis=dict(title='', gridcolor='#2a3248'),
+        yaxis=dict(title='', gridcolor='#2a3248', tickprefix='$ '),
+        margin=dict(l=30, r=20, t=10, b=30)
+    )
+
+    return (
+        selected_company,
+        selected_company,
+        format_money_short(ventas_2024),
+        format_money_short(utilidad_2024),
+        ingresos_fig,
+        utilidad_fig
+    )
 
 # Callback to populate dropdowns (both desktop and mobile)
 @app.callback(
